@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<div class="mao-screen-area" id="screenArea" style="height: 588px;">
+    <div id="main" class="mao-main" style="height: 588px; width: 930px; -webkit-tap-highlight-color: transparent; user-select: none; cursor: default; background-color: rgba(0, 0, 0, 0);"></div>
+</div>
+<script src="echarts.min.js"></script>
+<script>
+var myChart;
+var showKeyNo;
+var treeId = 1;
+var _currentKeyNo;
+var canEditRect = false;
+window.onload = function(){
+ myChart = echarts.init(document.getElementById('main'));
+ getData();
+}
+
+var rootData;
+var shareHolderData;
+var investmentData;
+function getData(){
+    guquan={"kg": {"KeyNo": "69e127d934fe6ba84b6cc093ceb3243f", "Names": [{"Org": 0, "Name": "银承互联网金融信息服务(南京)有限公司", "Oper": {"Org": 2, "Name": "曹石花", "KeyNo": "p87aa1ddd977c6af5f360b395bb89691", "HasImage": false, "OperType": 1, "CompanyCount": 2, "ProvinceInfo": "[{\"P\":\"JS\",\"C\":2,\"N\":\"江苏银承网络科技股份有限公司\"}]"}, "Type": 0, "KeyNo": "f4042c81ca09828dae54028ce91cb5f2", "Level": "1", "Percent": "", "EconKind": "有限责任公司（法人独资）", "ImageUrl": "https://qccdata.qichacha.com/AutoImage/f4042c81ca09828dae54028ce91cb5f2.jpg?x-oss-process=image/resize,w_120", "StartDate": 1411574400, "RegistCapi": "1000万元人民币", "ShortStatus": "在业", "PercentTotal": "100%"}], "NameCount": 1, "CompanyName": "江苏银承网络科技股份有限公司"}, "kzr": {"KeyNo": "69e127d934fe6ba84b6cc093ceb3243f", "UpdateTime": "2019-02-19 18:13:24", "CompanyName": "江苏银承网络科技股份有限公司", "ControllerData": {"Name": "曹石金", "KeyNo": "pce38c917369c1b44470e4738a41c8a9", "Percent": "", "PercentTotal": "80%"}}, "syr": {"KeyNo": "69e127d934fe6ba84b6cc093ceb3243f", "Names": [{"Org": 2, "Name": "曹石金", "KeyNo": "pce38c917369c1b44470e4738a41c8a9", "Percent": "", "ImageUrl": "", "PercentTotal": "80%", "RelatedCount": 4}], "CompanyName": "江苏银承网络科技股份有限公司"}, "touzi": {"Name": "江苏银承网络科技股份有限公司", "DetailList": [{"Org": 0, "Name": "银承互联网金融信息服务(南京)有限公司", "Tags": [], "KeyNo": "f4042c81ca09828dae54028ce91cb5f2", "Level": 1, "Percent": "100.00%", "DetailList": [], "ShouldCapi": "1000", "CompanyCode": "", "DetailCount": 0, "ShortStatus": "在业", "PercentTotal": "100.00%", "StockRightNum": ""}]}, "gudong": {"Name": "江苏银承网络科技股份有限公司", "DetailList": [{"Org": 2, "Name": "曹石金", "Tags": [], "KeyNo": "pce38c917369c1b44470e4738a41c8a9", "Level": 1, "Percent": "80.00%", "DetailList": [], "ShouldCapi": "800", "CompanyCode": "", "DetailCount": 0, "ShortStatus": "", "PercentTotal": "80.00%", "StockRightNum": ""}, {"Org": 2, "Name": "金艳", "Tags": [], "KeyNo": "pce0bd9100865577756db781dd5524b1", "Level": 1, "Percent": "16.00%", "DetailList": [], "ShouldCapi": "160", "CompanyCode": "", "DetailCount": 0, "ShortStatus": "", "PercentTotal": "16.00%", "StockRightNum": ""}, {"Org": 2, "Name": "强红军", "Tags": [], "KeyNo": "paa0da1bd87acd64cb9a1860212b3e40", "Level": 1, "Percent": "4.00%", "DetailList": [], "ShouldCapi": "40", "CompanyCode": "", "DetailCount": 0, "ShortStatus": "", "PercentTotal": "4.00%", "StockRightNum": ""}]}, "status": 200}
+	rootData = guquan
+	shareHolderData = guquan.gudong
+	investmentData = guquan.touzi
+	transTree(shareHolderData,1);
+	initTree(shareHolderData);
+	transTree(investmentData,2);
+	initTree(investmentData);
+	drawEquityStructure()
+ }
+
+function transTree(data,type){
+    if(!data) return;
+    data.children = data.DetailList
+    data.DetailList = undefined
+    data.treeId = this.treeId
+    if(type === 2){
+        data.isTouzi = true
+    }
+    let fontSize = 12;
+    if(data.ShortStatus=='注销'||data.ShortStatus=='吊销'){
+        data.Name = '【'+data.ShortStatus+'】'+data.Name;
+    }
+    if(data.Name.length>20){
+        data.name = data.Name.substr(0,19)+'…';
+        data.ltext = true;
+    }else{
+        data.name = data.Name;
+    }
+    if(data.Org==2 &&data.Name.length>8){
+        data.name = data.Name.substr(0,7)+'…';
+    }
+    data.name = data.name.replace(/(.{10})(?=.)/g, '$1\n');
+    if(data.StockRightNum){
+        data.subtext = '持股数：'+data.StockRightNum+'';
+    }else if(data.ShouldCapi){
+        let capArr = data.ShouldCapi.split(',');
+        let capNums;
+        if(capArr.length>1){
+            capNums = 0;
+            capArr.forEach(function(index,num){
+                capNums+=parseFloat(num+'')
+            })
+        }else{
+            capNums = parseFloat(data.ShouldCapi);
+        }
+        if((capNums+'').length>10){
+            capNums = capNums.toFixed(2);
+        }
+        data.subtext = '认缴金额：'+capNums+'万';
+    }
+    if(data.KeyNo){
+        if(data.KeyNo.substr(0,1)=='t'){
+            data.tag = '台湾公司';
+        }else if(data.KeyNo.substr(0,1)=='h'){
+            data.tag = '香港公司';
+        }
+    }
+    if(data.Tags){
+        data.Tags.forEach(function(index,vo){
+            if(vo.Type==2){
+                data.tag = '上市公司';
+                data.list = true;
+            }else if(vo.Type==1){
+                data.tag = '新三板公司';
+                data.list = true;
+            }else if(vo.Type==401){
+                data.tag = '港股上市';
+                data.list = true;
+            }
+        })
+    }
+
+    data.symbol = 'rectangle';
+    data.symbolSize= [146, 62];
+    if(data.tag){
+        data.symbolSize= [146, 82];
+    }
+    data.itemStyle =  {
+        color: "#fff",
+        borderWidth: "1",
+        borderColor: "#ccc",
+    }
+    data.label = {
+        show: true,
+        position: "inside",
+        fontStyle: "normal",
+        fontFamily: "MicroSoft YaHei",
+        color:'#333',
+        fontSize: fontSize
+    }
+    data.emphasis = {
+        itemStyle: {
+            color: "rgb(255,255,255,0)",
+            borderWidth: "1",
+            borderColor: "rgba(255,255,255,0)",
+        },
+        label:{
+            show:true,
+            color: "rgb(255,255,255,0)",
+            borderWidth: "1",
+            borderColor: "rgba(255,255,255,0)",
+        },
+        lineStyle:{
+            color: "rgb(255,255,255,0)",
+            borderWidth: "1",
+            borderColor: "rgba(255,255,255,0)",
+        }
+    }
+    if(data.Org==2){
+        data.symbol = 'rectangle';
+        data.symbolSize= [146, 55];
+        data.itemStyle =  {
+            color: "#F3F9FE",
+            borderWidth: "1",
+            borderColor: "#128bed",
+        };
+        data.label = {
+            show: true,
+            position: "inside",
+            color:'#333',
+            fontFamily: "MicroSoft YaHei",
+            fontSize: 14,
+            fontStyle: "normal",
+        }
+        data.emphasis = {
+            itemStyle: {
+                color: "rgb(255,255,255,0)",
+                borderWidth: "1",
+                borderColor: "rgba(255,255,255,0)",
+            },
+            label:{
+                show:true,
+                color: "rgb(255,255,255,0)",
+                borderWidth: "1",
+                borderColor: "rgba(255,255,255,0)",
+            }
+        }
+    }
+    let children = data.children;
+    if(children){
+        for(let i=0;i<children.length;i++){
+            this.transTree(children[i],type);
+            children[i] = this.addTampArrow(children[i],fontSize);
+        }
+    }
+    if(type==1){
+        if(this.rootData.kzr){
+            if(data.KeyNo){
+                if(data.KeyNo==this.rootData.kzr.ControllerData.KeyNo){
+                    data.kzr = true;
+                }
+            }else{
+                if(data.Name==this.rootData.kzr.ControllerData.Name){
+                    data.kzr = true;
+                }
+            }
+        }
+        if(this.rootData.syr){
+            this.rootData.syr.Names.forEach(function(index,vo){
+                if(data.KeyNo){
+                    if(data.KeyNo==vo.KeyNo){
+                        data.syr = vo.PercentTotal;
+                    }
+                }else{
+                    if(data.Name==vo.Name){
+                        data.syr = vo.PercentTotal;
+                    }
+                }
+            })
+        }
+    }else if(type==2){
+        if(this.rootData.kg){
+            this.rootData.kg.Names.forEach(function(index,vo){
+                if(type==2&&data.KeyNo&&data.KeyNo==vo.KeyNo){
+                    data.kg = true;
+                }
+            })
+        }
+    }
+    this.treeId++;
+}
+
+function addTampArrow(code,fontSize){
+    let tamp = code;
+    let Ratio = (!code.Percent||code.Percent=='0%')?'':code.Percent;
+    if(Ratio){
+        Ratio = (parseFloat(code.Percent.substr(0,code.Percent.length-1)).toFixed(4))*10000/10000+'%';
+        tamp.ratio = Ratio;
+    }
+    let labelShow = (Ratio != '0%');
+    code = {
+        name:Ratio,
+        symbol: 'triangle',
+        symbolSize: [12, 12],
+        symbolRotate:[180],
+        tooltip: {
+            show: true
+        },
+        itemStyle: {
+            color: "#128bed",
+            borderWidth:0,
+        },
+        label: {
+            show: labelShow,
+            position: "right",
+            fontFamily: "MicroSoft YaHei",
+            fontSize: fontSize,
+            fontStyle: "normal",
+        },
+        emphasis: {
+            itemStyle:{
+                color: "#128bed",
+                borderWidth:0,
+            },
+            label: {
+                show: labelShow,
+                position: "right",
+                fontFamily: "MicroSoft YaHei",
+                fontSize: fontSize,
+                fontStyle: "normal",
+            },
+            lineStyle: {
+                show: labelShow,
+                position: "right",
+                fontFamily: "MicroSoft YaHei",
+                fontSize: fontSize,
+                fontStyle: "normal",
+            }
+        },
+        children:[tamp]
+    }
+    return code;
+}
+
+function initTree(data){
+    if(!data) return;
+    data.symbolSize = [data.name.length*16+80, 52];
+    data.symbol = 'rectangle';
+    data.itemStyle =  {
+        color: "#fff",
+        borderWidth: "1",
+        borderColor: "#128bed",
+    }
+    data.label = {
+        show:true,
+        position: "inside",
+        color:'#000',
+        fontFamily: "MicroSoft YaHei",
+        fontSize: 16,
+        fontStyle: "normal",
+    }
+    data.emphasis = {
+        itemStyle:{
+            color: "rgba(255,255,255,0)",
+            borderWidth: "1",
+            borderColor: "#128bed00",
+        },
+        label: {
+            show:true,
+            color: "rgba(255,255,255,0)",
+            borderWidth: "1",
+            borderColor: "#128bed00",
+        },
+        lineStyle: {
+            color: "rgba(255,255,255,0)",
+            borderWidth: "1",
+            borderColor: "#128bed00",
+        }
+    }
+}
+
+//股权穿透图
+function drawEquityStructure(){
+    this.myChart.hideLoading();
+    let option = {
+        tooltip: {
+            trigger: 'item',
+            triggerOn: 'mousemove'
+        },
+        title : {
+            text: '',
+        },
+        series : [
+        ]
+    };
+    let roam=false;
+    if(this.shareHolderData){
+        option.series.push({
+            type: "tree",
+            data: [this.shareHolderData],
+            bottom: '50%',
+            symbol:  "emptyCircle",
+            orient: "BT",
+            roam:true,
+            leaves: {
+                label: {
+                    normal: {
+                        show:true,
+                        position: 'left',
+                        verticalAlign: 'middle',
+                        align: 'center'
+                    }
+                }
+            },
+        });
+    }
+    if(this.investmentData){
+        option.series.push({
+            type: "tree",
+            data: [this.investmentData],
+            top: '50%',
+            symbol:  "emptyCircle",
+            orient: "vertical",
+            z:1,
+            roam:roam,
+            leaves: {
+                label: {
+                    normal: {
+                        show:true,
+                        position: 'left',
+                        verticalAlign: 'middle',
+                        align: 'center'
+                    }
+                }
+            },
+        })
+    }
+    this.myChart.setOption(option);
+}
+</script>
+</body>
+</html>
